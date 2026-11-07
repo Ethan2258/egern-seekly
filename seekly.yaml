@@ -5,8 +5,8 @@ homepage: "https://github.com/Ethan2258/egern-seekly"
 icon: "arrow.up.forward.app"
 open_url: "seekly://"
 compat_arguments:
-  MODE: "page"
-compat_arguments_desc: "MODE：page = 跳转页（自动打开 Seekly，并保留「继续在浏览器中查看」按钮，默认）；redirect = 直接 302 跳转到 Seekly"
+  MODE: "redirect"
+compat_arguments_desc: "MODE：redirect = 直接 302 跳转到 Seekly（默认）；page = 跳转页（自动打开 Seekly，并保留「继续在浏览器中查看」按钮）"
 scriptings:
   - http_request:
       name: "NodeSeek 帖子跳转 Seekly"

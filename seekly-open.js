@@ -10,9 +10,9 @@
  * The Seekly app's own traffic (it scrapes the same pages) is left alone.
  *
  * env:
- *   MODE = page      (default) small landing page: opens Seekly at once and
- *                    keeps "Open in Seekly" / "Continue in browser" buttons
- *   MODE = redirect  bare 302 straight to seekly://post/<id>
+ *   MODE = redirect  (default) bare 302 straight to seekly://post/<id>
+ *   MODE = page      small landing page: opens Seekly at once and keeps
+ *                    "Open in Seekly" / "Continue in browser" buttons
  */
 
 // Seekly sends this fixed User-Agent for every request it makes itself
@@ -108,9 +108,9 @@ export default async function (ctx) {
 
   const postId = m[1];
   const appUrl = `seekly://post/${postId}`;
-  const mode = String((ctx.env && ctx.env.MODE) || 'page').toLowerCase();
+  const mode = String((ctx.env && ctx.env.MODE) || 'redirect').toLowerCase();
 
-  if (mode === 'redirect') {
+  if (mode !== 'page') {
     return ctx.respond({
       status: 302,
       headers: { Location: appUrl, 'Cache-Control': 'no-store' },

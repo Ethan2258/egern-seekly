@@ -26,12 +26,12 @@
 
 | 值 | 效果 |
 | --- | --- |
-| `page`（默认） | 返回一个小跳转页：自动打开 Seekly，同时保留「在 Seekly 中打开」和「继续在浏览器中查看」两个按钮。Telegram 内置浏览器拦截跳转时，可以手动点按钮。 |
-| `redirect` | 直接返回 302 跳转到 `seekly://post/<id>`，没有中间页。 |
+| `redirect`（默认） | 直接返回 302 跳转到 `seekly://post/<id>`，没有中间页。 |
+| `page` | 返回一个小跳转页：自动打开 Seekly，同时保留「在 Seekly 中打开」和「继续在浏览器中查看」两个按钮。Telegram 内置浏览器拦截跳转时，可以手动点按钮。 |
 
 ## 想在浏览器里看帖子？
 
-在链接后面加 `?seekly=0`（跳转页上的「继续在浏览器中查看」按钮就是这么做的），例如：
+在链接后面加 `?seekly=0`（`page` 模式下跳转页上的「继续在浏览器中查看」按钮就是这么做的），例如：
 
 ```
 https://www.nodeseek.com/post-1038101-1?seekly=0
@@ -42,7 +42,7 @@ https://www.nodeseek.com/post-1038101-1?seekly=0
 - Seekly 的 Scheme 只接收帖子 ID，链接里的页码（`post-ID-页码` 中的页码）不会带过去，进入后会停在帖子开头。
 - 在 Seekly 里选择「用 Safari/内置浏览器打开」帖子时，也会被跳回 Seekly。需要的话请用上面的 `?seekly=0`。
 - 设备系统正好是 iOS 17.0 时，Safari 的 User-Agent 和 Seekly 的一样，不会触发跳转。
-- 需要先装好 Seekly。没装的话，iOS 会提示地址无效，这时点「继续在浏览器中查看」即可。
+- 需要先装好 Seekly。没装的话，iOS 会提示地址无效，这时在链接后加 `?seekly=0` 再打开即可。
 
 ## 文件
 
