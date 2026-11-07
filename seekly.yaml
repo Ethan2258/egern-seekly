@@ -1,0 +1,21 @@
+name: "NodeSeek → Seekly"
+description: "在 Telegram、Safari 等处点开 NodeSeek 帖子链接时，不再进浏览器，直接在 Seekly App 中打开。"
+author: "Ethan2258"
+homepage: "https://github.com/Ethan2258/egern-seekly"
+icon: "arrow.up.forward.app"
+open_url: "seekly://"
+compat_arguments:
+  MODE: "page"
+compat_arguments_desc: "MODE：page = 跳转页（自动打开 Seekly，并保留「继续在浏览器中查看」按钮，默认）；redirect = 直接 302 跳转到 Seekly"
+scriptings:
+  - http_request:
+      name: "NodeSeek 帖子跳转 Seekly"
+      match: "^https?://(www\\.)?nodeseek\\.com/post-\\d+"
+      script_url: "https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly-open.js"
+      timeout: 10
+      env:
+        MODE: "{{{MODE}}}"
+mitm:
+  hostnames:
+    - "nodeseek.com"
+    - "www.nodeseek.com"
