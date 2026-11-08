@@ -1,5 +1,8 @@
 # egern-seekly
 
+[![CI](https://github.com/Ethan2258/egern-seekly/actions/workflows/ci.yml/badge.svg)](https://github.com/Ethan2258/egern-seekly/actions/workflows/ci.yml)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](./LICENSE)
+
 一个 [Egern](https://egernapp.com) 模块：在 Telegram、Safari 等地方点开 NodeSeek 帖子链接（比如 `https://nodeseek.com/post-1038101-1`）时，不再进浏览器，而是直接在 [Seekly](https://github.com/maow318/seekly-open)（NodeSeek 的第三方 iOS 客户端）里打开这个帖子。
 
 ## 安装
@@ -48,3 +51,19 @@ https://www.nodeseek.com/post-1038101-1?seekly=0
 
 - `seekly.yaml`：Egern 模块
 - `seekly-open.js`：请求脚本
+- `test/`、`scripts/check-module.mjs`：本地测试（不影响模块本身）
+
+## 开发
+
+需要 Node.js 22 及以上，没有第三方依赖：
+
+```bash
+npm run check   # 脚本语法，seekly.yaml 与脚本、README 是否一致
+npm test        # 模拟 Egern 调用脚本：跳转、放行、?seekly=0、page 模式
+```
+
+改动走 PR，CI 通过后合并。Egern 直接从 `main` 分支读取模块和脚本，合并后即生效。
+
+## 许可证
+
+[GPL-3.0](./LICENSE)
