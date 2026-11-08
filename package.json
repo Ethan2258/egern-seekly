@@ -1,0 +1,19 @@
+{
+  "name": "egern-seekly",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Egern 模块：点开 NodeSeek 帖子链接时直接在 Seekly App 中打开",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ethan2258/egern-seekly.git"
+  },
+  "scripts": {
+    "check": "node --check seekly-open.js && node scripts/check-module.mjs",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

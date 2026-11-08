@@ -26,12 +26,20 @@ const POST_RE =
 // Add ?seekly=0 to a post URL to view it in the browser without redirecting.
 const BYPASS_RE = /[?&]seekly=0(?:&|#|$)/;
 
+// Egern passes a Headers-like object; fall back to a plain object lookup
+// (case-insensitive) so an older or different runtime still works.
 function header(headers, name) {
+  if (!headers) return '';
   try {
-    return (headers && headers.get(name)) || '';
+    if (typeof headers.get === 'function') return headers.get(name) || '';
+    const wanted = name.toLowerCase();
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === wanted) return String(headers[key] || '');
+    }
   } catch (e) {
-    return '';
+    // Treat unreadable headers as missing.
   }
+  return '';
 }
 
 // True only for a top-level page load by a browser, not for API calls,
