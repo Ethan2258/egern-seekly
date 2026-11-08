@@ -1,7 +1,8 @@
 name: "NodeSeek → Seekly"
-description: "在 Telegram、Safari 等处点开 NodeSeek 帖子链接时，不再进浏览器，直接在 Seekly App 中打开。"
+description: "点开 NodeSeek 帖子链接时直接在 Seekly 中打开（seekly://post/<id>），Seekly 自身请求不受影响。"
 author: "Ethan2258"
 homepage: "https://github.com/Ethan2258/egern-seekly"
+manual: "https://github.com/Ethan2258/egern-seekly#readme"
 icon: "arrow.up.forward.app"
 open_url: "seekly://"
 compat_arguments:
