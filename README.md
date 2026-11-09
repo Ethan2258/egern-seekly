@@ -32,7 +32,7 @@ https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.yaml
 
 | 值 | 效果 |
 | --- | --- |
-| `redirect`（默认） | 直接返回 302 跳转到 `seekly://post/<id>`，没有中间页。 |
+| `redirect`（默认） | 直接返回 302 跳转到 `seekly://post/<id>`，没有中间页。请求经过 NodeSeek 的 Service Worker 转发时，302 过不去，会改用跳转页。 |
 | `page` | 返回一个小跳转页：自动打开 Seekly，同时保留「在 Seekly 中打开」和「继续在浏览器中查看」两个按钮。浏览器拦住跳转时可以手动点。 |
 
 只想在浏览器里看某个帖子，就在链接后面加 `?seekly=0`：
@@ -49,8 +49,11 @@ Telegram 会把 `https://` 链接交给系统浏览器；Egern 只能处理网�
 **链接还是直接在网页里打开了，没有跳转？**
 先在 Egern 里刷新模块，确认用的是最新版本（带有拒绝 QUIC 的规则）。NodeSeek 在 Cloudflare 上，Safari 等浏览器常用 HTTP/3（QUIC）访问它，而 MITM 解不开 QUIC，脚本就收不到请求。模块现在只对 `nodeseek.com` 拒绝 QUIC，浏览器会自动退回普通 HTTPS。之前已经打开过的网页标签不算，要重新点一次链接。还要注意：只有帖子链接（`/post-<ID>`）会跳转，首页、个人空间等其他页面不会。
 
+**以前在 Safari 里打开过 NodeSeek，之后就不跳了？**
+NodeSeek 会在浏览器里装一个 Service Worker（`sw.js`）。装好之后，帖子页面的请求要先经过它转发，请求头会变（`Sec-Fetch-Mode` 不再是 `navigate`）。模块会识别这种转发的请求；302 跳转过不了 Service Worker，所以这种情况统一返回跳转页，由页面里的脚本打开 Seekly（会短暂看到「正在打开 Seekly…」）。
+
 **会不会影响 Seekly 自己加载帖子？**
-不会。Seekly 抓取页面时使用固定的 User-Agent（`iPhone OS 17_0 … Version/17.0`），模块会识别并放行。另外只有浏览器的整页打开（`Sec-Fetch-Dest: document` / `Sec-Fetch-Mode: navigate`，老系统看 `Accept: text/html`）才会跳转，接口请求、预加载和 iframe 都不处理。
+不会。Seekly 抓取页面时使用固定的 User-Agent（`iPhone OS 17_0 … Version/17.0`），模块会识别并放行。另外只有浏览器打开整个页面（`Sec-Fetch-Mode: navigate` 或 `Sec-Fetch-Dest: document`，以及 Service Worker 转发的同一请求；老系统看 `Accept: text/html`）才会跳转，接口请求、预加载和 iframe 都不处理。
 
 **为什么只能跳到帖子开头？**
 Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中的页码带不过去。这个格式是从 Seekly 5.2 安装包的 `Info.plist` 和链接处理代码中确认的。

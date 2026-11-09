@@ -92,3 +92,25 @@ test('reads plain-object headers case-insensitively', async () => {
   const headers = { 'user-agent': SAFARI_UA, 'sec-fetch-dest': 'document', 'sec-fetch-mode': 'navigate' };
   assert.equal((await run('https://www.nodeseek.com/post-11', { headers, plainHeaders: true }))?.status, 302);
 });
+
+test('a page load relayed by the service worker gets the landing page, even in redirect mode', async () => {
+  const url = 'https://www.nodeseek.com/post-1041825-2';
+  for (const headers of [
+    // fetch(event.request): destination stays document, mode is no longer navigate
+    { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'same-origin', 'Sec-Fetch-Site': 'same-origin' },
+    { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'cors' },
+    // new Request(url, { headers }) keeps the HTML Accept header
+    { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'empty', 'Sec-Fetch-Mode': 'cors', Accept: 'text/html,application/xhtml+xml,*/*;q=0.8' },
+  ]) {
+    const response = await run(url, { headers });
+    assert.equal(response?.status, 200, JSON.stringify(headers));
+    assert.match(response.body, /location\.href = "seekly:\/\/post\/1041825"/);
+  }
+});
+
+test('script fetches and prefetches of a post are not redirected', async () => {
+  const url = 'https://www.nodeseek.com/post-1041825-2';
+  assert.equal(await run(url, { headers: { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'empty', 'Sec-Fetch-Mode': 'cors', Accept: '*/*' } }), undefined);
+  assert.equal(await run(url, { headers: { ...NAVIGATE, 'Sec-Purpose': 'prefetch' } }), undefined);
+  assert.equal(await run(url, { headers: { ...NAVIGATE, 'User-Agent': SEEKLY_UA, 'Sec-Fetch-Mode': 'same-origin' } }), undefined);
+});
