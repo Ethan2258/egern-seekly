@@ -46,6 +46,9 @@ https://www.nodeseek.com/post-1038101-1?seekly=0
 **为什么还会先闪一下 Safari，并弹出确认框？**
 Telegram 会把 `https://` 链接交给系统浏览器；Egern 只能处理网络请求，所以要等 Safari 开始加载页面时才能把它换成跳转。确认框是 iOS 对「网页跳转到其他 App」的安全提示，网页和代理都跳不过去。要真正一步直达，得靠通用链接（Universal Links），而那需要 nodeseek.com 官方授权给 Seekly，第三方客户端做不到。
 
+**链接还是直接在网页里打开了，没有跳转？**
+先在 Egern 里刷新模块，确认用的是最新版本（带有拒绝 QUIC 的规则）。NodeSeek 在 Cloudflare 上，Safari 等浏览器常用 HTTP/3（QUIC）访问它，而 MITM 解不开 QUIC，脚本就收不到请求。模块现在只对 `nodeseek.com` 拒绝 QUIC，浏览器会自动退回普通 HTTPS。之前已经打开过的网页标签不算，要重新点一次链接。还要注意：只有帖子链接（`/post-<ID>`）会跳转，首页、个人空间等其他页面不会。
+
 **会不会影响 Seekly 自己加载帖子？**
 不会。Seekly 抓取页面时使用固定的 User-Agent（`iPhone OS 17_0 … Version/17.0`），模块会识别并放行。另外只有浏览器的整页打开（`Sec-Fetch-Dest: document` / `Sec-Fetch-Mode: navigate`，老系统看 `Accept: text/html`）才会跳转，接口请求、预加载和 iframe 都不处理。
 
@@ -57,7 +60,7 @@ Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中�
 - 在 Seekly 里选择「用浏览器打开」帖子时，也会被跳回 Seekly，需要的话用 `?seekly=0`。
 - 系统正好是 iOS 17.0 时，Safari 的 User-Agent 与 Seekly 相同，不会触发跳转。
 - 没装 Seekly 时 iOS 会提示地址无效，在链接后加 `?seekly=0` 再打开即可。
-- MITM 只覆盖 `nodeseek.com` 和 `www.nodeseek.com`，不解密其他网站的流量。
+- MITM 只覆盖 `nodeseek.com` 和 `www.nodeseek.com`，不解密其他网站的流量；QUIC 也只对 `nodeseek.com` 拒绝。
 
 ## 文件
 

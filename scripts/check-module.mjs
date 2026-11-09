@@ -8,9 +8,10 @@ const script = readFileSync(new URL('../seekly-open.js', import.meta.url), 'utf8
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 const problems = [];
 
-// Double-quoted YAML scalar value of `key:` (only simple escapes are used).
-function value(key) {
-  const m = yaml.match(new RegExp(`^\\s*(?:- )?${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"\\s*$`, 'm'));
+// Double-quoted YAML scalar value of the first `key:` after `section` (only simple escapes are used).
+function value(key, section = '') {
+  const from = section ? yaml.indexOf(section) : 0;
+  const m = yaml.slice(Math.max(from, 0)).match(new RegExp(`^\\s*(?:- )?${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"\\s*$`, 'm'));
   if (!m) {
     problems.push(`seekly.yaml: missing ${key}`);
     return '';
@@ -28,7 +29,7 @@ if (!readme.includes(`${repoRaw}seekly.yaml`)) {
 
 let match;
 try {
-  match = new RegExp(value('match'));
+  match = new RegExp(value('match', 'http_request:'));
 } catch (error) {
   problems.push(`seekly.yaml: match is not a valid regex (${error.message})`);
 }
@@ -50,6 +51,11 @@ for (const [url, expected] of Object.entries(samples)) {
 const hosts = [...yaml.matchAll(/^\s+- "([^"]+)"\s*$/gm)].map((m) => m[1]);
 for (const host of ['nodeseek.com', 'www.nodeseek.com']) {
   if (!hosts.includes(host)) problems.push(`seekly.yaml: mitm hostnames should include ${host}`);
+}
+
+// Without this rule browsers reach nodeseek.com over HTTP/3, which MITM cannot see.
+if (!/- and:\s+match:\s+- domain_suffix:\s+match: "nodeseek\.com"\s+- protocol:\s+match: "quic"\s+policy: REJECT/.test(yaml)) {
+  problems.push('seekly.yaml: rules should REJECT QUIC for nodeseek.com');
 }
 
 const yamlMode = value('MODE');
