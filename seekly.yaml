@@ -8,6 +8,16 @@ open_url: "seekly://"
 compat_arguments:
   MODE: "redirect"
 compat_arguments_desc: "MODE：redirect = 直接 302 跳转到 Seekly（默认）；page = 跳转页（自动打开 Seekly，并保留「继续在浏览器中查看」按钮）"
+# Safari 等浏览器会对 Cloudflare 站点走 HTTP/3（QUIC），MITM 解不开 QUIC，
+# 脚本就收不到请求。只对 nodeseek.com 拒绝 QUIC，浏览器会自动退回 HTTPS（TCP）。
+rules:
+  - and:
+      match:
+        - domain_suffix:
+            match: "nodeseek.com"
+        - protocol:
+            match: "quic"
+      policy: REJECT
 scriptings:
   - http_request:
       name: "NodeSeek 帖子跳转 Seekly"
