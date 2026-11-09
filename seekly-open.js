@@ -13,6 +13,8 @@
  *   MODE = redirect  (default) bare 302 straight to seekly://post/<id>
  *   MODE = page      small landing page: opens Seekly at once and keeps
  *                    "Open in Seekly" / "Continue in browser" buttons
+ *
+ * Requests relayed by NodeSeek's service worker always get the landing page.
  */
 
 // Seekly sends this fixed User-Agent for every request it makes itself
@@ -42,20 +44,29 @@ function header(headers, name) {
   return '';
 }
 
-// True only for a top-level page load by a browser, not for API calls,
-// prefetches, iframes or the Seekly app itself.
-function isBrowserNavigation(req) {
+// How a browser is asking for the post page:
+//   'navigate' - a plain top-level page load (Sec-Fetch-Mode: navigate)
+//   'worker'   - the same page load relayed by NodeSeek's service worker
+//                (www.nodeseek.com/sw.js). Its fetch() turns the mode into
+//                same-origin/cors, so only Sec-Fetch-Dest: document or an HTML
+//                Accept header is left to recognise it.
+//   null       - anything else: the Seekly app itself, API calls, iframes,
+//                prefetches. Those are passed through untouched.
+function classify(req) {
   const h = req.headers;
   const ua = header(h, 'User-Agent');
-  if (!ua || ua === SEEKLY_UA) return false;
+  if (!ua || ua === SEEKLY_UA) return null;
+  if (/prefetch|prerender/i.test(header(h, 'Sec-Purpose') + header(h, 'Purpose'))) return null;
 
   const dest = header(h, 'Sec-Fetch-Dest').toLowerCase();
   const mode = header(h, 'Sec-Fetch-Mode').toLowerCase();
-  if (dest || mode) {
-    return (!dest || dest === 'document') && (!mode || mode === 'navigate');
-  }
-  // Older browsers without Fetch Metadata: require an HTML page request.
-  return /text\/html/i.test(header(h, 'Accept'));
+  const wantsHtml = /text\/html/i.test(header(h, 'Accept'));
+
+  if (!dest && !mode) return wantsHtml ? 'navigate' : null; // no Fetch Metadata (older browsers)
+  if (mode === 'navigate') return !dest || dest === 'document' ? 'navigate' : null;
+  if (dest === 'document') return 'worker';
+  if ((!dest || dest === 'empty') && wantsHtml) return 'worker';
+  return null;
 }
 
 function bypassUrl(url) {
@@ -112,13 +123,16 @@ export default async function (ctx) {
 
   const m = req.url.match(POST_RE);
   if (!m || BYPASS_RE.test(req.url)) return;
-  if (!isBrowserNavigation(req)) return;
+  const kind = classify(req);
+  if (!kind) return;
 
   const postId = m[1];
   const appUrl = `seekly://post/${postId}`;
   const mode = String((ctx.env && ctx.env.MODE) || 'redirect').toLowerCase();
 
-  if (mode !== 'page') {
+  // A 302 to seekly:// does not survive a service worker's fetch(), so a
+  // relayed request always gets the page, whose script opens Seekly.
+  if (mode !== 'page' && kind === 'navigate') {
     return ctx.respond({
       status: 302,
       headers: { Location: appUrl, 'Cache-Control': 'no-store' },
