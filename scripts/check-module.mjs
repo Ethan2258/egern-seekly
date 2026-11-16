@@ -1,6 +1,6 @@
-// Consistency checks for seekly.yaml, without a YAML dependency: the module's
-// match pattern, script URL, MITM hosts and default MODE must agree with
-// seekly-open.js and the README.
+// Consistency checks for seekly.yaml and the Surge / Shadowrocket / Loon / Stash
+// configs, without a YAML dependency: match pattern, script URL, MITM hosts,
+// the QUIC rule and the default MODE must agree with the scripts and README.
 import { readFileSync } from 'node:fs';
 
 const yaml = readFileSync(new URL('../seekly.yaml', import.meta.url), 'utf8');
@@ -64,8 +64,46 @@ if (yamlMode !== 'redirect' || scriptMode !== 'redirect' || !/`redirect`（默�
   problems.push(`default MODE differs: seekly.yaml=${yamlMode}, script=${scriptMode}; README should say redirect（默认）`);
 }
 
+// The other apps: same pattern, hosts and QUIC rule, pointing at the compat script.
+const pattern = value('match', 'http_request:');
+const compatUrl = `${repoRaw}seekly-open.compat.js`;
+const apps = {
+  'seekly.sgmodule': {
+    script: `seekly-open = type=http-request,pattern=${pattern},script-path=${compatUrl},timeout=10,argument=MODE={{{MODE}}}`,
+    mitm: 'hostname = %APPEND% nodeseek.com, www.nodeseek.com',
+    quic: 'AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT',
+    extra: ['#!arguments=MODE:redirect'],
+  },
+  'seekly.module': {
+    script: `seekly-open = type=http-request,pattern=${pattern},script-path=${compatUrl},timeout=10,argument=MODE=redirect`,
+    mitm: 'hostname = %APPEND% nodeseek.com, www.nodeseek.com',
+    quic: 'AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP',
+    extra: [],
+  },
+  'seekly.plugin': {
+    script: `http-request ${pattern} script-path=${compatUrl}, timeout=10, tag=NodeSeek 帖子跳转 Seekly, argument=[{MODE}]`,
+    mitm: 'hostname = nodeseek.com, www.nodeseek.com',
+    quic: 'AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT',
+    extra: ['MODE = select,"redirect","page",'],
+  },
+  'seekly.stoverride': {
+    script: `- match: "${pattern.replace(/\\/g, '\\\\')}"`,
+    mitm: 'mitm:\n    - "nodeseek.com"\n    - "www.nodeseek.com"',
+    quic: '- "AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT"',
+    extra: [`url: "${compatUrl}"`, 'argument: "MODE=redirect"', 'type: request'],
+  },
+};
+for (const [file, want] of Object.entries(apps)) {
+  const text = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+  for (const [what, line] of Object.entries({ script: want.script, mitm: want.mitm, 'QUIC rule': want.quic })) {
+    if (!text.includes(line)) problems.push(`${file}: ${what} should be: ${line}`);
+  }
+  for (const line of want.extra) if (!text.includes(line)) problems.push(`${file}: missing ${line}`);
+  if (!readme.includes(`${repoRaw}${file}`)) problems.push(`README.md: missing install URL for ${file}`);
+}
+
 if (problems.length) {
   console.error(problems.map((p) => `✖ ${p}`).join('\n'));
   process.exit(1);
 }
-console.log(`seekly.yaml 检查通过：${Object.keys(samples).length} 个链接样例，MITM ${hosts.join(', ')}`);
+console.log(`模块检查通过（seekly.yaml + ${Object.keys(apps).length} 个其他应用）：${Object.keys(samples).length} 个链接样例，MITM ${hosts.join(', ')}`);

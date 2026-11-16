@@ -1,34 +1,62 @@
-# NodeSeek → Seekly · Egern 模块
+# NodeSeek → Seekly · Egern / Surge / Loon / Stash / 小火箭 模块
 
 [![CI](https://github.com/Ethan2258/egern-seekly/actions/workflows/ci.yml/badge.svg)](https://github.com/Ethan2258/egern-seekly/actions/workflows/ci.yml)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](./LICENSE)
 [![Egern](https://img.shields.io/badge/Egern-module-orange.svg)](https://egernapp.com)
+[![Surge](https://img.shields.io/badge/Surge-module-blue.svg)](https://nssurge.com)
+[![Loon](https://img.shields.io/badge/Loon-plugin-green.svg)](https://nsloon.app)
+[![Stash](https://img.shields.io/badge/Stash-override-purple.svg)](https://stash.ws)
+[![Shadowrocket](https://img.shields.io/badge/Shadowrocket-module-red.svg)](https://apps.apple.com/app/id932747118)
 
 在 Telegram、Safari 等地方点开 NodeSeek 帖子链接（比如 `https://nodeseek.com/post-1038101-1`）时，直接在 [Seekly](https://github.com/maow318/seekly-open)（NodeSeek 第三方 iOS 客户端）里打开这个帖子，不用停在网页上。
 
 ```
-Telegram 点链接 → Safari 发起请求 → Egern 本地返回 302 → seekly://post/1038101 → Seekly 打开帖子
+Telegram 点链接 → Safari 发起请求 → 代理 App 本地返回 302 → seekly://post/1038101 → Seekly 打开帖子
 ```
 
 ## 安装
 
-**一键安装**（在 iPhone 上点开）：[添加到 Egern](https://egernapp.com/modules/new?name=NodeSeek%20%E2%86%92%20Seekly&url=https%3A%2F%2Fraw.githubusercontent.com%2FEthan2258%2Fegern-seekly%2Fmain%2Fseekly.yaml)
+先选你在用的代理 App。所有版本行为一致：同样的链接匹配、MITM 主机（只有 `nodeseek.com` 和 `www.nodeseek.com`）、对 `nodeseek.com` 拒绝 QUIC 的规则，以及同一份跳转逻辑。
 
-或者在 Egern 里手动添加模块，地址填：
+| App | 文件 | 一键安装 | 手动添加的地址 |
+| --- | --- | --- | --- |
+| Egern | `seekly.yaml` | [添加到 Egern](https://egernapp.com/modules/new?name=NodeSeek%20%E2%86%92%20Seekly&url=https%3A%2F%2Fraw.githubusercontent.com%2FEthan2258%2Fegern-seekly%2Fmain%2Fseekly.yaml) | `https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.yaml` |
+| Loon | `seekly.plugin` | [添加到 Loon](https://www.nsloon.com/openloon/import?plugin=https%3A%2F%2Fraw.githubusercontent.com%2FEthan2258%2Fegern-seekly%2Fmain%2Fseekly.plugin) | `https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.plugin` |
+| Surge | `seekly.sgmodule` | 见下方链接 | `https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.sgmodule` |
+| Stash | `seekly.stoverride` | 见下方链接 | `https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.stoverride` |
+| Shadowrocket（小火箭） | `seekly.module` | 见下方链接 | `https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.module` |
+
+Surge、Stash 和小火箭的一键安装是 App 自己的链接，GitHub 网页上点不了，复制到 Safari 地址栏打开即可：
 
 ```
-https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly.yaml
+surge:///install-module?url=https%3A%2F%2Fraw.githubusercontent.com%2FEthan2258%2Fegern-seekly%2Fmain%2Fseekly.sgmodule
+stash://install-override?url=https%3A%2F%2Fraw.githubusercontent.com%2FEthan2258%2Fegern-seekly%2Fmain%2Fseekly.stoverride
+shadowrocket://install?module=https%3A%2F%2Fraw.githubusercontent.com%2FEthan2258%2Fegern-seekly%2Fmain%2Fseekly.module
 ```
 
-然后：
+手动添加的位置：
 
-1. 打开 Egern 的 MITM，安装并信任根证书（设置 → 通用 → 关于本机 → 证书信任设置）。
-2. 确认已安装 [Seekly](https://github.com/maow318/seekly-open/releases)，并且 Egern 处于连接状态。
-3. 在 Telegram 里点 NodeSeek 帖子链接，选「打开」。Safari 会弹出「在 "Seekly" 中打开此页？」，点「打开」即可。
+- **Egern**：模块 → 添加模块，填 `seekly.yaml` 的地址。
+- **Loon**：配置 → 插件 → 添加插件，填 `seekly.plugin` 的地址（需要 Loon 3.2.1 及以上，才能在插件里选 `MODE`）。
+- **Surge**：首页 → 模块 → 安装新模块，填 `seekly.sgmodule` 的地址（需要 Surge 5，`PROTOCOL` 规则和模块参数都依赖它）。
+- **Stash**：首页 → 覆写 → 安装覆写，填 `seekly.stoverride` 的地址。
+- **小火箭**：配置 → 模块 → 右上角 +，填 `seekly.module` 的地址。
+
+装好之后：
+
+1. 在 App 里打开 MITM（HTTPS 解密），安装并信任根证书（设置 → 通用 → 关于本机 → 证书信任设置）。
+2. 确认已安装 [Seekly](https://github.com/maow318/seekly-open/releases)，并且代理处于连接状态。
+3. 在 Telegram、Discord 里点 NodeSeek 帖子链接，选「打开」。Safari 会弹出「在 "Seekly" 中打开此页？」，点「打开」即可。
 
 ## 参数
 
-在 Egern 的模块参数里可以改 `MODE`：
+可以改 `MODE`：
+
+- **Egern**：模块参数里改 `MODE`。
+- **Surge**：模块的参数里改 `MODE`。
+- **Loon**：插件设置里的「跳转方式」。
+- **Stash、小火箭**：这两个 App 的覆写 / 模块不支持参数，默认 `redirect`。想用 `page`，把文件里的 `argument` 改成 `MODE=page`，保存为本地模块使用。
+
 
 | 值 | 效果 |
 | --- | --- |
@@ -44,10 +72,10 @@ https://www.nodeseek.com/post-1038101-1?seekly=0
 ## 常见问题
 
 **为什么还会先闪一下 Safari，并弹出确认框？**
-Telegram 会把 `https://` 链接交给系统浏览器；Egern 只能处理网络请求，所以要等 Safari 开始加载页面时才能把它换成跳转。确认框是 iOS 对「网页跳转到其他 App」的安全提示，网页和代理都跳不过去。要真正一步直达，得靠通用链接（Universal Links），而那需要 nodeseek.com 官方授权给 Seekly，第三方客户端做不到。
+Telegram 会把 `https://` 链接交给系统浏览器；代理 App 只能处理网络请求，所以要等 Safari 开始加载页面时才能把它换成跳转。确认框是 iOS 对「网页跳转到其他 App」的安全提示，网页和代理都跳不过去。要真正一步直达，得靠通用链接（Universal Links），而那需要 nodeseek.com 官方授权给 Seekly，第三方客户端做不到。
 
 **链接还是直接在网页里打开了，没有跳转？**
-先在 Egern 里刷新模块，确认用的是最新版本（带有拒绝 QUIC 的规则）。NodeSeek 在 Cloudflare 上，Safari 等浏览器常用 HTTP/3（QUIC）访问它，而 MITM 解不开 QUIC，脚本就收不到请求。模块现在只对 `nodeseek.com` 拒绝 QUIC，浏览器会自动退回普通 HTTPS。之前已经打开过的网页标签不算，要重新点一次链接。还要注意：只有帖子链接（`/post-<ID>`）会跳转，首页、个人空间等其他页面不会。
+先在 App 里刷新模块（插件、覆写），确认用的是最新版本（带有拒绝 QUIC 的规则）。NodeSeek 在 Cloudflare 上，Safari 等浏览器常用 HTTP/3（QUIC）访问它，而 MITM 解不开 QUIC，脚本就收不到请求。模块现在只对 `nodeseek.com` 拒绝 QUIC，浏览器会自动退回普通 HTTPS。之前已经打开过的网页标签不算，要重新点一次链接。还要注意：只有帖子链接（`/post-<ID>`）会跳转，首页、个人空间等其他页面不会。
 
 **以前在 Safari 里打开过 NodeSeek，之后就不跳了？**
 NodeSeek 会在浏览器里装一个 Service Worker（`sw.js`）。装好之后，帖子页面的请求要先经过它转发，请求头会变（`Sec-Fetch-Mode` 不再是 `navigate`）。模块会识别这种转发的请求；302 跳转过不了 Service Worker，所以这种情况统一返回跳转页，由页面里的脚本打开 Seekly（会短暂看到「正在打开 Seekly…」）。
@@ -70,7 +98,13 @@ Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中�
 | 路径 | 说明 |
 | --- | --- |
 | `seekly.yaml` | Egern 模块 |
-| `seekly-open.js` | 请求脚本 |
+| `seekly.sgmodule` | Surge 模块 |
+| `seekly.plugin` | Loon 插件 |
+| `seekly.stoverride` | Stash 覆写 |
+| `seekly.module` | 小火箭模块 |
+| `seekly-open.js` | 请求脚本（Egern） |
+| `seekly-open.compat.js` | 请求脚本（Surge / Loon / Stash / 小火箭），由 `seekly-open.js` 生成 |
+| `scripts/build-compat.mjs` | 生成兼容脚本：原样复制 Egern 的跳转逻辑，外面套一层 `$request` / `$argument` / `$done` 适配 |
 | `test/`、`scripts/check-module.mjs` | 本地测试与一致性检查（不影响模块本身） |
 
 ## 开发
@@ -78,11 +112,12 @@ Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中�
 需要 Node.js 22 及以上，没有第三方依赖：
 
 ```bash
-npm run check   # 脚本语法，seekly.yaml 与脚本、README 是否一致
-npm test        # 模拟 Egern 调用脚本：跳转、放行、?seekly=0、page 模式
+npm run build   # 改了 seekly-open.js 之后，重新生成 seekly-open.compat.js
+npm run check   # 脚本语法，兼容脚本是否最新，各应用配置与脚本、README 是否一致
+npm test        # 分别按 Egern 和 Surge / Loon / Stash / 小火箭的方式调用脚本：跳转、放行、?seekly=0、page 模式、各种参数格式
 ```
 
-改动走 PR，CI 通过后合并。Egern 直接从 `main` 分支读取模块和脚本，合并后即生效。
+改动走 PR，CI 通过后合并。只改 `seekly-open.js`，不要手改 `seekly-open.compat.js`。各 App 直接从 `main` 分支读取配置和脚本，合并后刷新即可生效。
 
 ## 声明
 

@@ -1,0 +1,26 @@
+name: "NodeSeek → Seekly"
+desc: "点开 NodeSeek 帖子链接时直接在 Seekly 中打开（seekly://post/<id>），Seekly 自身请求不受影响。"
+author: "Ethan2258"
+homepage: "https://github.com/Ethan2258/egern-seekly"
+
+# 浏览器对 Cloudflare 站点会走 HTTP/3（QUIC），MITM 解不开 QUIC。
+# 只对 nodeseek.com 拒绝 QUIC，浏览器会退回 HTTPS（TCP）。
+rules:
+  - "AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT"
+
+http:
+  mitm:
+    - "nodeseek.com"
+    - "www.nodeseek.com"
+  script:
+    - match: "^https?://(www\\.)?nodeseek\\.com/post-\\d+"
+      name: "seekly-open"
+      type: request
+      timeout: 10
+      # 改成 "MODE=page" 可换成跳转页（自动打开 Seekly，并保留「继续在浏览器中查看」按钮）
+      argument: "MODE=redirect"
+
+script-providers:
+  seekly-open:
+    url: "https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly-open.compat.js"
+    interval: 86400

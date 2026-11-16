@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 24
 
-      # 脚本语法，以及 seekly.yaml 的匹配规则、脚本地址、MITM 主机、默认 MODE 和脚本 / README 是否一致。
+      # 脚本语法；兼容脚本是否由 seekly-open.js 生成；各应用配置的匹配规则、脚本地址、MITM 主机、QUIC 规则、默认 MODE 与脚本 / README 是否一致。
       - name: Check module
         run: npm run check
 
