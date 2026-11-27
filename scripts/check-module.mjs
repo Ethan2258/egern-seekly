@@ -71,7 +71,7 @@ const apps = {
   'seekly.sgmodule': {
     script: `seekly-open = type=http-request,pattern=${pattern},script-path=${compatUrl},timeout=10,argument=MODE={{{MODE}}}`,
     mitm: 'hostname = %APPEND% nodeseek.com, www.nodeseek.com',
-    quic: 'AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT',
+    quic: 'AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT-NO-DROP',
     extra: ['#!arguments=MODE:redirect'],
   },
   'seekly.module': {
