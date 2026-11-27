@@ -68,6 +68,8 @@ shadowrocket://install?module=https%3A%2F%2Fraw.githubusercontent.com%2FEthan225
 https://www.nodeseek.com/post-1038101-1?seekly=0
 ```
 
+已经在浏览器里看 NodeSeek 时，站内的链接不会跳转：用 `?seekly=0` 打开后翻页、点帖子里的其他帖子，或者从首页、分类页点进帖子，都留在浏览器里。只有从 Telegram、其他 App 或其他网站点进来的帖子链接才会跳到 Seekly。
+
 ## 常见问题
 
 **为什么还会先闪一下 Safari，并弹出确认框？**
@@ -90,6 +92,7 @@ Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中�
 - 在 Seekly 里选择「用浏览器打开」帖子时，也会被跳回 Seekly，需要的话用 `?seekly=0`。
 - 系统正好是 iOS 17.0 时，Safari 的 User-Agent 与 Seekly 相同，不会触发跳转。
 - 没装 Seekly 时 iOS 会提示地址无效，在链接后加 `?seekly=0` 再打开即可。跳转页（`page` 模式，或经过 Service Worker 的请求）会在几秒后提示去下载 Seekly。
+- 浏览器装了 NodeSeek 的 Service Worker 之后，从首页点进帖子仍可能跳到 Seekly：这种请求分不清是站内点击还是从外面打开，模块按从外面打开处理（分类页、帖子页里的链接不受影响）。
 - MITM 只覆盖 `nodeseek.com` 和 `www.nodeseek.com`，不解密其他网站的流量；QUIC 也只对 `nodeseek.com` 拒绝。
 
 ## 文件

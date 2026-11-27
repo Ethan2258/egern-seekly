@@ -53,8 +53,7 @@ function headerReader(headers) {
 //                Accept header is left to recognise it.
 //   null       - anything else: the Seekly app itself, API calls, iframes,
 //                prefetches and link previews. Those are passed through untouched.
-function classify(req) {
-  const header = headerReader(req.headers);
+function classify(header) {
   const ua = header('User-Agent');
   if (!ua || ua === SEEKLY_UA) return null;
   // Sec-Purpose (current browsers), Purpose (older Chrome), X-Purpose (Safari
@@ -71,6 +70,28 @@ function classify(req) {
   if (dest === 'document') return 'worker';
   if ((!dest || dest === 'empty') && wantsHtml) return 'worker';
   return null;
+}
+
+// A NodeSeek page as Referer means the user followed a link on the site.
+// The site root and script URLs do not count: a service worker's own fetch()
+// sends its script URL (…/sw.js), or only the origin under a strict
+// Referrer-Policy, even for a link opened from Telegram.
+const SITE_PAGE_RE = /^https?:\/\/(?:www\.)?nodeseek\.com(?::\d+)?(\/[^?#]*)/i;
+
+function isSitePage(referer) {
+  const m = referer.match(SITE_PAGE_RE);
+  return !!m && m[1] !== '/' && !/\.js$/i.test(m[1]);
+}
+
+// True when the user is already reading NodeSeek in the browser and followed
+// a link there: keep them in the browser instead of bouncing to Seekly.
+// Links from Telegram, other apps or other sites carry Sec-Fetch-Site: none /
+// cross-site and no NodeSeek Referer. A relayed ('worker') request is always
+// same-origin, so only its Referer tells.
+function fromSite(kind, header) {
+  const site = header('Sec-Fetch-Site').toLowerCase();
+  if (kind === 'navigate' && (site === 'same-origin' || site === 'same-site')) return true;
+  return isSitePage(header('Referer'));
 }
 
 function bypassUrl(url) {
@@ -142,8 +163,9 @@ async function handle(ctx) {
 
   const m = req.url.match(POST_RE);
   if (!m || BYPASS_RE.test(req.url)) return;
-  const kind = classify(req);
-  if (!kind) return;
+  const header = headerReader(req.headers);
+  const kind = classify(header);
+  if (!kind || fromSite(kind, header)) return;
 
   const postId = m[1];
   const appUrl = `seekly://post/${postId}`;

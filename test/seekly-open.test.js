@@ -144,6 +144,45 @@ for (const [label, run] of [['Egern', runEgern], ['compat', runCompat]]) {
     }
   });
 
+  test(`${label}: links followed on NodeSeek itself stay in the browser`, async () => {
+    const url = 'https://www.nodeseek.com/post-9-2';
+    const WORKER = { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'same-origin', 'Sec-Fetch-Site': 'same-origin' };
+    for (const headers of [
+      // a plain click on the site: next page, another post, the home page
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'same-origin', Referer: 'https://www.nodeseek.com/post-9-1?seekly=0' },
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'same-origin' },
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'same-site', Referer: 'https://nodeseek.com/' },
+      // no Fetch Metadata: only the Referer tells
+      { 'User-Agent': SAFARI_UA, Accept: 'text/html', Referer: 'https://www.nodeseek.com/post-9-1' },
+      // relayed by the service worker, which keeps the page's Referer
+      { ...WORKER, Referer: 'https://www.nodeseek.com/post-9-1?seekly=0' },
+      { ...WORKER, Referer: 'https://www.nodeseek.com/categories/tech' },
+      { ...WORKER, Referer: 'https://nodeseek.com:443/space/1#/general' },
+    ]) {
+      assert.equal(await run(url, { headers }), undefined, JSON.stringify(headers));
+    }
+  });
+
+  test(`${label}: links from outside NodeSeek still open Seekly`, async () => {
+    const url = 'https://www.nodeseek.com/post-9-2';
+    for (const headers of [
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'none' },
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'cross-site', Referer: 'https://www.google.com/' },
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'cross-site', Referer: 'https://evil.example/?u=https://www.nodeseek.com/post-1' },
+      { ...NAVIGATE, 'Sec-Fetch-Site': 'cross-site', Referer: 'https://www.nodeseek.com.evil.example/post-1' },
+      { 'User-Agent': SAFARI_UA, Accept: 'text/html', Referer: 'https://t.me/' },
+    ]) {
+      assert.equal((await run(url, { headers }))?.status, 302, JSON.stringify(headers));
+    }
+    // A relayed request is always same-origin. Its Referer is empty, the
+    // worker's script, or the bare origin when the worker made the request.
+    const WORKER = { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'same-origin', 'Sec-Fetch-Site': 'same-origin' };
+    for (const referer of [undefined, 'https://www.nodeseek.com/sw.js', 'https://www.nodeseek.com/sw.js?v=3', 'https://www.nodeseek.com/', 'https://www.nodeseek.com']) {
+      const headers = referer ? { ...WORKER, Referer: referer } : WORKER;
+      assert.equal((await run(url, { headers }))?.status, 200, String(referer));
+    }
+  });
+
   test(`${label}: script fetches and prefetches of a post are not redirected`, async () => {
     const url = 'https://www.nodeseek.com/post-1041825-2';
     assert.equal(await run(url, { headers: { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'empty', 'Sec-Fetch-Mode': 'cors', Accept: '*/*' } }), undefined);
