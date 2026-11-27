@@ -57,11 +57,10 @@ shadowrocket://install?module=https%3A%2F%2Fraw.githubusercontent.com%2FEthan225
 - **Loon**：插件设置里的「跳转方式」。
 - **Stash、小火箭**：这两个 App 的覆写 / 模块不支持参数，默认 `redirect`。想用 `page`，把文件里的 `argument` 改成 `MODE=page`，保存为本地模块使用。
 
-
 | 值 | 效果 |
 | --- | --- |
 | `redirect`（默认） | 直接返回 302 跳转到 `seekly://post/<id>`，没有中间页。请求经过 NodeSeek 的 Service Worker 转发时，302 过不去，会改用跳转页。 |
-| `page` | 返回一个小跳转页：自动打开 Seekly，同时保留「在 Seekly 中打开」和「继续在浏览器中查看」两个按钮。浏览器拦住跳转时可以手动点。 |
+| `page` | 返回一个小跳转页：自动打开 Seekly，同时保留「在 Seekly 中打开」和「继续在浏览器中查看」两个按钮。浏览器拦住跳转时可以手动点；几秒后还停在这页，会提示重试或下载 Seekly。 |
 
 只想在浏览器里看某个帖子，就在链接后面加 `?seekly=0`：
 
@@ -81,7 +80,7 @@ Telegram 会把 `https://` 链接交给系统浏览器；代理 App 只能处理
 NodeSeek 会在浏览器里装一个 Service Worker（`sw.js`）。装好之后，帖子页面的请求要先经过它转发，请求头会变（`Sec-Fetch-Mode` 不再是 `navigate`）。模块会识别这种转发的请求；302 跳转过不了 Service Worker，所以这种情况统一返回跳转页，由页面里的脚本打开 Seekly（会短暂看到「正在打开 Seekly…」）。
 
 **会不会影响 Seekly 自己加载帖子？**
-不会。Seekly 抓取页面时使用固定的 User-Agent（`iPhone OS 17_0 … Version/17.0`），模块会识别并放行。另外只有浏览器打开整个页面（`Sec-Fetch-Mode: navigate` 或 `Sec-Fetch-Dest: document`，以及 Service Worker 转发的同一请求；老系统看 `Accept: text/html`）才会跳转，接口请求、预加载和 iframe 都不处理。
+不会。Seekly 抓取页面时使用固定的 User-Agent（`iPhone OS 17_0 … Version/17.0`），模块会识别并放行。另外只有浏览器打开整个页面（`Sec-Fetch-Mode: navigate` 或 `Sec-Fetch-Dest: document`，以及 Service Worker 转发的同一请求；老系统看 `Accept: text/html`）才会跳转，接口请求、预加载、链接预览和 iframe 都不处理。
 
 **为什么只能跳到帖子开头？**
 Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中的页码带不过去。这个格式是从 Seekly 5.2 安装包的 `Info.plist` 和链接处理代码中确认的。
@@ -90,7 +89,7 @@ Seekly 的 URL Scheme 只接收帖子 ID（`seekly://post/<id>`），链接中�
 
 - 在 Seekly 里选择「用浏览器打开」帖子时，也会被跳回 Seekly，需要的话用 `?seekly=0`。
 - 系统正好是 iOS 17.0 时，Safari 的 User-Agent 与 Seekly 相同，不会触发跳转。
-- 没装 Seekly 时 iOS 会提示地址无效，在链接后加 `?seekly=0` 再打开即可。
+- 没装 Seekly 时 iOS 会提示地址无效，在链接后加 `?seekly=0` 再打开即可。跳转页（`page` 模式，或经过 Service Worker 的请求）会在几秒后提示去下载 Seekly。
 - MITM 只覆盖 `nodeseek.com` 和 `www.nodeseek.com`，不解密其他网站的流量；QUIC 也只对 `nodeseek.com` 拒绝。
 
 ## 文件

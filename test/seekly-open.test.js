@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import handler from '../seekly-open.js';
 
@@ -109,6 +113,13 @@ for (const [label, run] of [['Egern', runEgern], ['compat', runCompat]]) {
     assert.match(response.body, /location\.href = "seekly:\/\/post\/5"/);
   });
 
+  test(`${label}: the landing page hints at installing Seekly only if it does not open`, async () => {
+    const { body } = await run('https://www.nodeseek.com/post-5', { env: { MODE: 'page' } });
+    assert.match(body, /<p class="hint" hidden>[^<]*<a href="https:\/\/github\.com\/maow318\/seekly-open\/releases">/);
+    assert.match(body, /setTimeout\(function \(\) \{ if \(!left\) hint\.hidden = false; \}, 2500\)/);
+    assert.match(body, /addEventListener\('pagehide', away\)/);
+  });
+
   test(`${label}: an unknown MODE falls back to the redirect`, async () => {
     assert.equal((await run('https://www.nodeseek.com/post-3', { env: { MODE: 'nope' } }))?.status, 302);
   });
@@ -136,7 +147,15 @@ for (const [label, run] of [['Egern', runEgern], ['compat', runCompat]]) {
   test(`${label}: script fetches and prefetches of a post are not redirected`, async () => {
     const url = 'https://www.nodeseek.com/post-1041825-2';
     assert.equal(await run(url, { headers: { 'User-Agent': SAFARI_UA, 'Sec-Fetch-Dest': 'empty', 'Sec-Fetch-Mode': 'cors', Accept: '*/*' } }), undefined);
-    assert.equal(await run(url, { headers: { ...NAVIGATE, 'Sec-Purpose': 'prefetch' } }), undefined);
+    for (const purpose of [
+      { 'Sec-Purpose': 'prefetch' },
+      { 'Sec-Purpose': 'prefetch;prerender' },
+      { Purpose: 'prefetch' },
+      { 'X-Purpose': 'preview' },
+      { 'X-Moz': 'prefetch' },
+    ]) {
+      assert.equal(await run(url, { headers: { ...NAVIGATE, ...purpose } }), undefined, JSON.stringify(purpose));
+    }
     assert.equal(await run(url, { headers: { ...NAVIGATE, 'User-Agent': SEEKLY_UA, 'Sec-Fetch-Mode': 'same-origin' } }), undefined);
   });
 }
@@ -154,6 +173,24 @@ test('compat: reads MODE from every $argument shape', async () => {
 
 test('compat: a request without a method is treated as GET', async () => {
   assert.equal((await runCompat('https://www.nodeseek.com/post-5', { method: null }))?.status, 302);
+});
+
+test('build: runs from a checkout whose path has spaces or non-ASCII characters', () => {
+  const dir = mkdtempSync(join(tmpdir(), '代码 seekly-'));
+  try {
+    mkdirSync(join(dir, 'scripts'));
+    copyFileSync(fileURLToPath(new URL('../scripts/build-compat.mjs', import.meta.url)), join(dir, 'scripts/build-compat.mjs'));
+    copyFileSync(fileURLToPath(new URL('../seekly-open.js', import.meta.url)), join(dir, 'seekly-open.js'));
+    writeFileSync(join(dir, 'seekly-open.compat.js'), 'stale');
+    const run = (...args) => spawnSync(process.execPath, [join(dir, 'scripts/build-compat.mjs'), ...args], { encoding: 'utf8' });
+
+    assert.equal(run('--check').status, 1, 'a stale compat script must fail --check');
+    assert.equal(run().status, 0);
+    assert.equal(readFileSync(join(dir, 'seekly-open.compat.js'), 'utf8'), COMPAT);
+    assert.equal(run('--check').status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('compat: seekly-open.compat.js is up to date', async () => {

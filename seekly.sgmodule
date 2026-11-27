@@ -8,7 +8,8 @@
 
 [Rule]
 # 浏览器对 Cloudflare 站点会走 HTTP/3（QUIC），MITM 解不开 QUIC。只对 nodeseek.com 拒绝 QUIC，浏览器会退回 HTTPS（TCP）。
-AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT
+# 用 REJECT-NO-DROP：QUIC 会反复重试，普通 REJECT 短时间内触发太多次会被 Surge 改成静默丢弃，浏览器要等超时才退回 TCP。
+AND,((DOMAIN-SUFFIX,nodeseek.com),(PROTOCOL,QUIC)),REJECT-NO-DROP
 
 [Script]
 seekly-open = type=http-request,pattern=^https?://(www\.)?nodeseek\.com/post-\d+,script-path=https://raw.githubusercontent.com/Ethan2258/egern-seekly/main/seekly-open.compat.js,timeout=10,argument=MODE={{{MODE}}}

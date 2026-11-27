@@ -25,23 +25,32 @@ const SEEKLY_UA =
 const POST_RE =
   /^https?:\/\/(?:www\.)?nodeseek\.com\/post-(\d+)(?:-(\d+))?\/?(?:[?#].*)?$/i;
 
+// Shown on the landing page when Seekly does not open (most likely not installed).
+const SEEKLY_DOWNLOAD = 'https://github.com/maow318/seekly-open/releases';
+
 // Add ?seekly=0 to a post URL to view it in the browser without redirecting.
 const BYPASS_RE = /[?&]seekly=0(?:&|#|$)/;
 
-// Egern passes a Headers-like object; fall back to a plain object lookup
-// (case-insensitive) so an older or different runtime still works.
-function header(headers, name) {
-  if (!headers) return '';
+// Egern passes a Headers-like object, the other apps a plain object whose
+// keys can be in any case. Returns a case-insensitive lookup that gives ''
+// for a missing or unreadable header. A plain object is indexed once.
+function headerReader(headers) {
+  if (headers && typeof headers.get === 'function') {
+    return (name) => {
+      try {
+        return String(headers.get(name) || '');
+      } catch (e) {
+        return '';
+      }
+    };
+  }
+  const byName = {};
   try {
-    if (typeof headers.get === 'function') return headers.get(name) || '';
-    const wanted = name.toLowerCase();
-    for (const key of Object.keys(headers)) {
-      if (key.toLowerCase() === wanted) return String(headers[key] || '');
-    }
+    for (const key of Object.keys(headers || {})) byName[key.toLowerCase()] = String(headers[key] || '');
   } catch (e) {
     // Treat unreadable headers as missing.
   }
-  return '';
+  return (name) => byName[name.toLowerCase()] || '';
 }
 
 // How a browser is asking for the post page:
@@ -51,16 +60,19 @@ function header(headers, name) {
 //                same-origin/cors, so only Sec-Fetch-Dest: document or an HTML
 //                Accept header is left to recognise it.
 //   null       - anything else: the Seekly app itself, API calls, iframes,
-//                prefetches. Those are passed through untouched.
+//                prefetches and link previews. Those are passed through untouched.
 function classify(req) {
-  const h = req.headers;
-  const ua = header(h, 'User-Agent');
+  const header = headerReader(req.headers);
+  const ua = header('User-Agent');
   if (!ua || ua === SEEKLY_UA) return null;
-  if (/prefetch|prerender/i.test(header(h, 'Sec-Purpose') + header(h, 'Purpose'))) return null;
+  // Sec-Purpose (current browsers), Purpose (older Chrome), X-Purpose (Safari
+  // previews) and X-Moz (Firefox) mark loads the user did not open.
+  const purpose = header('Sec-Purpose') + header('Purpose') + header('X-Purpose') + header('X-Moz');
+  if (/prefetch|prerender|preview/i.test(purpose)) return null;
 
-  const dest = header(h, 'Sec-Fetch-Dest').toLowerCase();
-  const mode = header(h, 'Sec-Fetch-Mode').toLowerCase();
-  const wantsHtml = /text\/html/i.test(header(h, 'Accept'));
+  const dest = header('Sec-Fetch-Dest').toLowerCase();
+  const mode = header('Sec-Fetch-Mode').toLowerCase();
+  const wantsHtml = /text\/html/i.test(header('Accept'));
 
   if (!dest && !mode) return wantsHtml ? 'navigate' : null; // no Fetch Metadata (older browsers)
   if (mode === 'navigate') return !dest || dest === 'document' ? 'navigate' : null;
@@ -75,10 +87,10 @@ function bypassUrl(url) {
   return base + sep + 'seekly=0' + (hash !== undefined ? '#' + hash : '');
 }
 
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[c]);
+  return s.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 }
 
 function landingPage(postId, appUrl, webUrl) {
@@ -100,19 +112,34 @@ function landingPage(postId, appUrl, webUrl) {
   main { width: 100%; max-width: 360px; padding: 24px 16px; text-align: center; }
   h1 { font-size: 20px; margin: 0 0 4px; }
   p { margin: 0 0 24px; opacity: .6; font-size: 14px; }
-  a { display: block; padding: 14px; margin-top: 12px; border-radius: 14px; text-decoration: none; font-weight: 600; }
+  .btn { display: block; padding: 14px; margin-top: 12px; border-radius: 14px; text-decoration: none; font-weight: 600; }
   .primary { background: #0a84ff; color: #fff; }
   .secondary { background: rgba(127,127,127,.18); color: inherit; }
+  .hint { margin: 20px 0 0; }
+  .hint a { color: #0a84ff; }
 </style>
 </head>
 <body>
 <main>
   <h1>正在打开 Seekly…</h1>
   <p>NodeSeek 帖子 #${postId}</p>
-  <a class="primary" href="${app}">在 Seekly 中打开</a>
-  <a class="secondary" href="${web}">继续在浏览器中查看</a>
+  <a class="btn primary" href="${app}">在 Seekly 中打开</a>
+  <a class="btn secondary" href="${web}">继续在浏览器中查看</a>
+  <p class="hint" hidden>没有自动打开？点上面的按钮重试。还没装 Seekly 的话，先去<a href="${SEEKLY_DOWNLOAD}">下载 Seekly</a>。</p>
 </main>
-<script>location.href = ${JSON.stringify(appUrl)};</script>
+<script>
+(function () {
+  // Once Seekly opens, Safari hides this page; if it is still showing a few
+  // seconds later, the jump was blocked or Seekly is not installed.
+  var hint = document.querySelector('.hint');
+  var left = false;
+  function away() { left = true; hint.hidden = true; }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) away(); });
+  window.addEventListener('pagehide', away);
+  setTimeout(function () { if (!left) hint.hidden = false; }, 2500);
+  location.href = ${JSON.stringify(appUrl)};
+})();
+</script>
 </body>
 </html>`;
 }

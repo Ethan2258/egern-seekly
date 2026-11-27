@@ -5,7 +5,8 @@
 //
 //   node scripts/build-compat.mjs           write seekly-open.compat.js
 //   node scripts/build-compat.mjs --check   fail if it is out of date
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const source = new URL('../seekly-open.js', import.meta.url);
 const target = new URL('../seekly-open.compat.js', import.meta.url);
@@ -95,7 +96,18 @@ function parseArgument(arg) {
 `;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run only when executed directly, not when imported by the tests. Compare
+// URLs, not strings: import.meta.url percent-encodes spaces and non-ASCII
+// characters (e.g. a checkout under ~/代码/), which a raw path does not.
+function isMain() {
+  try {
+    return pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
+  } catch (e) {
+    return false;
+  }
+}
+
+if (isMain()) {
   const built = buildCompat(readFileSync(source, 'utf8'));
   if (process.argv.includes('--check')) {
     if (readFileSync(target, 'utf8') !== built) {
